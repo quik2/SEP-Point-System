@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''C:\\Users\\quinn\\SEP-Point-System'' -Force\")",
+      "Bash(powershell:*)",
+      "Bash(git -C \"C:\\Users\\quinn\\SEP-Point-System\" log --oneline -10)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(node:*)",
+      "Bash([ -f logo.png ])",
+      "Bash(npm run dev:*)",
+      "Bash(taskkill:*)",
+      "Bash(nul)",
+      "Bash(pkill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nComplete SEP Point System - Production Ready\n\n- Modern Next.js 14 + TypeScript + Tailwind CSS\n- Public leaderboard with podium design and rank indicators\n- Admin dashboard with event management system\n- 4 event types: Active Meeting, Exec Meeting, Social, Custom\n- Draft system with auto-save (Google Sheets style)\n- Event revert functionality\n- Real-time updates via Supabase\n- Profile photos for all members (AVIF + JPG support)\n- Responsive design with professional dark theme\n- Vercel deployment ready\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
