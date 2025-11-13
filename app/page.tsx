@@ -118,7 +118,7 @@ export default function LeaderboardPage() {
                 <p className="text-2xl md:text-3xl font-bold text-gray-400 mb-1">
                   {top3[1].points}
                 </p>
-                {top3[1].rank_change !== 0 && (
+                {/* {top3[1].rank_change !== 0 && (
                   <div className="flex items-center gap-1">
                     {top3[1].rank_change > 0 ? (
                       <>
@@ -136,7 +136,7 @@ export default function LeaderboardPage() {
                       </>
                     )}
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* 1st Place */}
@@ -162,7 +162,7 @@ export default function LeaderboardPage() {
                 <p className="text-3xl md:text-4xl font-bold text-yellow-400 mb-1">
                   {top3[0].points}
                 </p>
-                {top3[0].rank_change !== 0 && (
+                {/* {top3[0].rank_change !== 0 && (
                   <div className="flex items-center gap-1">
                     {top3[0].rank_change > 0 ? (
                       <>
@@ -180,7 +180,7 @@ export default function LeaderboardPage() {
                       </>
                     )}
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* 3rd Place */}
@@ -205,7 +205,7 @@ export default function LeaderboardPage() {
                 <p className="text-2xl md:text-3xl font-bold text-orange-400 mb-1">
                   {top3[2].points}
                 </p>
-                {top3[2].rank_change !== 0 && (
+                {/* {top3[2].rank_change !== 0 && (
                   <div className="flex items-center gap-1">
                     {top3[2].rank_change > 0 ? (
                       <>
@@ -223,7 +223,7 @@ export default function LeaderboardPage() {
                       </>
                     )}
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function LeaderboardPage() {
           {rest.map((member, index) => {
             const actualIndex = index + 3;
             const isAtRisk = member.points < 80;
-            const rankChange = member.rank_change;
+            // const rankChange = member.rank_change;
 
             return (
               <div
@@ -278,7 +278,7 @@ export default function LeaderboardPage() {
                   {/* Points Display with Rank Change */}
                   <div className="flex items-center gap-4 shrink-0">
                     {/* Rank Change Indicator */}
-                    {rankChange !== 0 && (
+                    {/* {rankChange !== 0 && (
                       <div className="flex items-center gap-1">
                         {rankChange > 0 ? (
                           <>
@@ -296,7 +296,7 @@ export default function LeaderboardPage() {
                           </>
                         )}
                       </div>
-                    )}
+                    )} */}
 
                     <div className="text-right">
                       <div className={cn(

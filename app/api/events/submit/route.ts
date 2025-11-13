@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getServiceRoleClient();
     const body = await request.json();
-    const { name, category, customEventType, attendance, selectedMembers, socialPoints, customRules } = body;
+    const { name, category, customEventType, attendance, selectedMembers, socialPoints, customRules, notes } = body;
 
     // Get all active members with current ranks
     const { data: allMembers } = await supabase
@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
           member_id: memberId,
           status: status as AttendanceStatus,
           points_change: pointsChange,
+          notes: notes?.[memberId] || null,
         });
 
         if (pointsChange !== 0) {

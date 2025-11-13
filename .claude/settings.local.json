@@ -18,7 +18,11 @@
       "Bash(nul)",
       "Bash(pkill:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nComplete SEP Point System - Production Ready\n\n- Modern Next.js 14 + TypeScript + Tailwind CSS\n- Public leaderboard with podium design and rank indicators\n- Admin dashboard with event management system\n- 4 event types: Active Meeting, Exec Meeting, Social, Custom\n- Draft system with auto-save (Google Sheets style)\n- Event revert functionality\n- Real-time updates via Supabase\n- Profile photos for all members (AVIF + JPG support)\n- Responsive design with professional dark theme\n- Vercel deployment ready\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nComplete SEP Point System - Production Ready\n\n- Modern Next.js 14 + TypeScript + Tailwind CSS\n- Public leaderboard with podium design and rank indicators\n- Admin dashboard with event management system\n- 4 event types: Active Meeting, Exec Meeting, Social, Custom\n- Draft system with auto-save (Google Sheets style)\n- Event revert functionality\n- Real-time updates via Supabase\n- Profile photos for all members (AVIF + JPG support)\n- Responsive design with professional dark theme\n- Vercel deployment ready\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "WebFetch(domain:airtable.com)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

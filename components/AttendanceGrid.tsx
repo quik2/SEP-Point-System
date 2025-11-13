@@ -15,6 +15,7 @@ interface DraftEvent {
   category: EventCategory;
   customEventType?: string;
   attendance?: Record<string, AttendanceStatus>;
+  notes?: Record<string, string>; // Member ID -> notes/excuse
   selectedMembers?: string[];
   socialPoints?: number;
   customRules?: Partial<Record<AttendanceStatus, number>>;
@@ -34,11 +35,15 @@ export default function AttendanceGrid() {
   const [currentDraft, setCurrentDraft] = useState<DraftEvent | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [newAirtableEvents, setNewAirtableEvents] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncInterval, setSyncInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchMembers();
     loadDrafts();
     fetchDraftEvents();
+    checkForNewAirtableEvents();
   }, []);
 
   // Auto-save drafts
@@ -65,14 +70,58 @@ export default function AttendanceGrid() {
       const data = await response.json();
       if (data.success) {
         // Get only draft events from the database
-        const dbDrafts = data.data.filter((e: any) => e.is_draft === true || e.is_draft === 'true');
-        // Merge with localStorage drafts (localStorage takes priority)
-        const localDraftIds = draftEvents.map(d => d.id).filter(Boolean);
-        const newDbDrafts = dbDrafts.filter((e: any) => !localDraftIds.includes(e.id));
-        // TODO: Convert DB events to DraftEvent format if needed
+        const dbDrafts = data.data.filter((e: any) => e.is_draft === true);
+
+        // Convert database drafts to DraftEvent format
+        const convertedDbDrafts: DraftEvent[] = await Promise.all(
+          dbDrafts.map(async (dbEvent: any) => {
+            // Fetch attendance records for this event
+            const attendanceRes = await fetch(`/api/events/${dbEvent.id}/attendance`);
+            const attendanceData = await attendanceRes.json();
+
+            const attendance: Record<string, AttendanceStatus> = {};
+            const notes: Record<string, string> = {};
+
+            if (attendanceData.success && attendanceData.data) {
+              attendanceData.data.forEach((record: any) => {
+                attendance[record.member_id] = record.status;
+                if (record.notes) {
+                  notes[record.member_id] = record.notes;
+                }
+              });
+              console.log(`Loaded ${dbEvent.name}: ${attendanceData.data.length} attendance records, ${Object.keys(notes).length} with notes`);
+              const excusedCount = attendanceData.data.filter((r: any) => r.status === 'excused_absent').length;
+              console.log(`  - ${excusedCount} excused absences`);
+            }
+
+            // Determine category from event_type
+            let category: EventCategory = 'active_meeting';
+            if (dbEvent.event_type === 'Exec Meeting') category = 'exec_meeting';
+            else if (dbEvent.event_type === 'Social Event') category = 'social';
+            else if (dbEvent.event_type !== 'Active Meeting') category = 'custom';
+
+            return {
+              id: dbEvent.id,
+              name: dbEvent.name,
+              category,
+              customEventType: category === 'custom' ? dbEvent.event_type : undefined,
+              attendance,
+              notes,
+              selectedMembers: dbEvent.selected_members || [],
+              customRules: dbEvent.custom_rules || undefined,
+            };
+          })
+        );
+
+        // Merge with localStorage drafts
+        const localDrafts = JSON.parse(localStorage.getItem('event-drafts') || '[]');
+        const localDraftIds = localDrafts.map((d: DraftEvent) => d.id).filter(Boolean);
+        const newDbDrafts = convertedDbDrafts.filter(d => !localDraftIds.includes(d.id));
+
+        setDraftEvents([...localDrafts, ...newDbDrafts]);
       }
     } catch (error) {
-      console.error('Failed to fetch draft events');
+      console.error('Failed to fetch draft events:', error);
     }
   };
 
@@ -87,6 +136,103 @@ export default function AttendanceGrid() {
       }
     } catch (error) {
       console.error('Failed to load members');
+    }
+  };
+
+  const checkForNewAirtableEvents = async () => {
+    try {
+      const response = await fetch('/api/airtable/detect-events');
+      const data = await response.json();
+      if (data.success && data.data.new > 0) {
+        setNewAirtableEvents(data.data.events);
+      }
+    } catch (error) {
+      console.error('Failed to check for new Airtable events:', error);
+    }
+  };
+
+  const importAirtableEvent = async (eventId: string) => {
+    try {
+      setMessage({ text: 'Importing event from Airtable...', type: 'success' });
+
+      const response = await fetch('/api/airtable/create-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMessage({ text: `Event "${data.data.name}" imported!`, type: 'success' });
+        setNewAirtableEvents(newAirtableEvents.filter(e => e.eventId !== eventId));
+        await fetchDraftEvents(); // Reload drafts
+
+        // Start auto-syncing if we just imported
+        if (currentDraft?.id === data.data.eventId) {
+          startLiveSync(data.data.eventId);
+        }
+      } else {
+        setMessage({ text: `Failed to import: ${data.error}`, type: 'error' });
+      }
+    } catch (error) {
+      setMessage({ text: 'Error importing event', type: 'error' });
+    } finally {
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
+  const startLiveSync = (eventId: string) => {
+    if (syncInterval) {
+      clearInterval(syncInterval);
+    }
+
+    setIsSyncing(true);
+
+    // Sync immediately
+    syncEventResponses(eventId);
+
+    // Then sync every 30 seconds
+    const interval = setInterval(() => {
+      syncEventResponses(eventId);
+    }, 30000);
+
+    setSyncInterval(interval);
+  };
+
+  const stopLiveSync = () => {
+    if (syncInterval) {
+      clearInterval(syncInterval);
+      setSyncInterval(null);
+    }
+    setIsSyncing(false);
+  };
+
+  const syncEventResponses = async (eventId: string) => {
+    try {
+      const response = await fetch('/api/airtable/sync-responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log(`Synced ${data.data.updatedRecords} attendance records`);
+        // Reload the draft to show updated data
+        await fetchDraftEvents();
+
+        // If this draft is currently open, reload it
+        if (currentDraft?.id === eventId) {
+          const updatedDraft = draftEvents.find(d => d.id === eventId);
+          if (updatedDraft) {
+            setCurrentDraft(updatedDraft);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing responses:', error);
     }
   };
 
@@ -128,8 +274,27 @@ export default function AttendanceGrid() {
     setCurrentDraft(draft);
   };
 
-  const deleteDraft = (draftId: string) => {
-    setDraftEvents(draftEvents.filter(d => d.id !== draftId));
+  const deleteDraft = async (draftId: string) => {
+    try {
+      // If the draft has an ID (from database), delete it from the database
+      const draft = draftEvents.find(d => d.id === draftId);
+      if (draft && draftId && draftId.length > 20) { // UUIDs are longer than 20 chars
+        const response = await fetch(`/api/events/${draftId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          console.error('Failed to delete draft from database');
+        }
+      }
+
+      // Remove from local state and localStorage
+      const updatedDrafts = draftEvents.filter(d => d.id !== draftId);
+      setDraftEvents(updatedDrafts);
+      localStorage.setItem('event-drafts', JSON.stringify(updatedDrafts.filter(d => !d.id || d.id.length <= 20)));
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+    }
   };
 
   const submitEvent = async () => {
@@ -191,19 +356,30 @@ export default function AttendanceGrid() {
   };
 
   // Initialize attendance for members when they're loaded or category changes
+  // Skip this for drafts loaded from database (they already have attendance set)
   useEffect(() => {
     if (currentDraft && allMembers.length > 0) {
-      const members = getMembersForEvent();
-      const newAttendance = { ...currentDraft.attendance };
+      console.log('useEffect triggered for draft:', currentDraft.name, 'has ID:', !!currentDraft.id);
 
-      members.forEach(member => {
-        if (!newAttendance[member.id]) {
-          newAttendance[member.id] = 'present';
+      if (!currentDraft.id) {
+        // Only initialize for NEW drafts (no ID means not from database)
+        console.log('  Initializing attendance for new draft');
+        const members = getMembersForEvent();
+        const newAttendance = { ...currentDraft.attendance };
+
+        members.forEach(member => {
+          if (!newAttendance[member.id]) {
+            newAttendance[member.id] = 'present';
+          }
+        });
+
+        if (Object.keys(newAttendance).length !== Object.keys(currentDraft.attendance || {}).length) {
+          setCurrentDraft({ ...currentDraft, attendance: newAttendance });
         }
-      });
-
-      if (Object.keys(newAttendance).length !== Object.keys(currentDraft.attendance || {}).length) {
-        setCurrentDraft({ ...currentDraft, attendance: newAttendance });
+      } else {
+        console.log('  Skipping initialization - draft from database');
+        console.log('  Current attendance records:', Object.keys(currentDraft.attendance || {}).length);
+        console.log('  Current notes:', Object.keys(currentDraft.notes || {}).length);
       }
     }
   }, [currentDraft?.category, allMembers.length]);
@@ -222,6 +398,34 @@ export default function AttendanceGrid() {
   if (!currentDraft) {
     return (
       <div className="space-y-6">
+        {/* New Airtable Events Notification */}
+        {newAirtableEvents.length > 0 && (
+          <div className="bg-blue-950/30 border border-blue-500/50 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-blue-400 mb-3">
+              🆕 New Events from Airtable ({newAirtableEvents.length})
+            </h3>
+            <div className="space-y-2">
+              {newAirtableEvents.map((event) => (
+                <div
+                  key={event.eventId}
+                  className="flex items-center justify-between p-3 bg-card rounded-lg border border-border"
+                >
+                  <div>
+                    <p className="font-semibold">{event.eventName}</p>
+                    <p className="text-xs text-muted-foreground">{event.date}</p>
+                  </div>
+                  <button
+                    onClick={() => importAirtableEvent(event.eventId)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+                  >
+                    Import Event
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Draft Events Grid */}
         {draftEvents.length > 0 && (
           <div className="bg-card border border-border rounded-lg p-6">
@@ -275,9 +479,40 @@ export default function AttendanceGrid() {
       {/* Event Configuration */}
       <div className="bg-card border border-border rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Event Configuration</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-semibold">Event Configuration</h2>
+            {/* Live Sync Controls - only show for Airtable-linked drafts */}
+            {currentDraft.id && currentDraft.id.length > 20 && (
+              <div className="flex items-center gap-2">
+                {isSyncing ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-green-400">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      Live syncing
+                    </div>
+                    <button
+                      onClick={stopLiveSync}
+                      className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                    >
+                      Stop Sync
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => currentDraft.id && startLiveSync(currentDraft.id)}
+                    className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                  >
+                    Start Live Sync
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <button
-            onClick={() => setCurrentDraft(null)}
+            onClick={() => {
+              stopLiveSync();
+              setCurrentDraft(null);
+            }}
             className="p-2 hover:bg-secondary rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
@@ -412,11 +647,15 @@ export default function AttendanceGrid() {
                   <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Current Points</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Notes/Excuse</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {membersToShow.map((member) => {
                   const status = currentDraft.attendance?.[member.id] || 'present';
+                  const notes = currentDraft.notes?.[member.id] || '';
+                  const showNotes = status === 'excused_absent' || status === 'excused_late';
+
                   return (
                     <tr key={member.id} className="hover:bg-secondary/20 transition-colors">
                       <td className="px-4 py-3 font-medium">{member.name}</td>
@@ -437,6 +676,23 @@ export default function AttendanceGrid() {
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                           ))}
                         </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        {showNotes && (
+                          <input
+                            type="text"
+                            value={notes}
+                            onChange={(e) => setCurrentDraft({
+                              ...currentDraft,
+                              notes: {
+                                ...currentDraft.notes,
+                                [member.id]: e.target.value,
+                              }
+                            })}
+                            placeholder="Enter excuse/reason..."
+                            className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        )}
                       </td>
                     </tr>
                   );
