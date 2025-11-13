@@ -84,7 +84,7 @@ export default function LeaderboardPage() {
               className="object-contain"
             />
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Points Leaderboard
+              SEPoints Leaderboard
             </h1>
           </div>
           <p className="text-muted-foreground text-sm md:text-base">

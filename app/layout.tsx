@@ -4,6 +4,9 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'SEP Point System',
   description: 'Live leaderboard and point tracking system',
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({
