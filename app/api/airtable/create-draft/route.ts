@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         );
       });
 
-      let status = 'present'; // Default to present
+      let status = 'absent'; // Default to absent - mark present when they show up
       let notes = null;
 
       // If they responded "No", mark as excused_absent with their notes

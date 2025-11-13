@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         );
       });
 
-      let newStatus = 'present';
+      let newStatus = 'absent'; // Default to absent
       let newNotes = null;
 
       if (airtableResponse) {
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
           newStatus = 'present';
           newNotes = null;
         }
-        // If no response yet, keep as present (default)
+        // If no response yet, keep as absent (default)
       }
 
       // Update the attendance record
