@@ -79,7 +79,9 @@ export function extractEventDate(eventId: string): string {
 
 /**
  * Detect all events in Airtable by scanning column names
- * Looks for patterns like "{event_name}_Question_{date}"
+ * Supports two patterns:
+ * 1. Original: "{event_name}_Question_{YYYY_MM_DD}"
+ * 2. Poll format: "POLL_Q_{id}" (e.g., "POLL_Q_2.3")
  */
 export function detectEventsInRecords(records: AirtableRecord[]): AirtableEvent[] {
   if (records.length === 0) return [];
@@ -88,26 +90,45 @@ export function detectEventsInRecords(records: AirtableRecord[]): AirtableEvent[
   const sampleRecord = records[0];
   const columnNames = Object.keys(sampleRecord.fields);
 
-  // Find all columns ending with "_Question_{date}"
+  const events: AirtableEvent[] = [];
+
+  // Pattern 1: Original format - columns ending with "_Question_{date}"
   const questionColumns = columnNames.filter(col =>
     col.match(/_Question_\d{4}_\d{2}_\d{2}$/)
   );
 
-  // Extract event info from each question column
-  const events: AirtableEvent[] = questionColumns.map(questionCol => {
-    // Extract event ID (everything before "_Question")
+  questionColumns.forEach(questionCol => {
     const eventId = questionCol.replace(/_Question_\d{4}_\d{2}_\d{2}$/, '');
     const dateSuffix = questionCol.match(/_(\d{4}_\d{2}_\d{2})$/)?.[1] || '';
     const fullEventId = dateSuffix ? `${eventId}_${dateSuffix}` : eventId;
 
-    return {
+    events.push({
       eventId: fullEventId,
       eventName: parseEventName(eventId),
       date: extractEventDate(fullEventId),
       questionColumn: questionCol,
       responseColumn: questionCol.replace('_Question_', '_Response_'),
       notesColumn: questionCol.replace('_Question_', '_Notes_'),
-    };
+    });
+  });
+
+  // Pattern 2: Poll format - columns starting with "POLL_Q_"
+  const pollColumns = columnNames.filter(col =>
+    col.match(/^POLL_Q_/)
+  );
+
+  pollColumns.forEach(pollCol => {
+    const pollId = pollCol.replace(/^POLL_Q_/, '');
+    const eventId = `POLL_${pollId}`;
+
+    events.push({
+      eventId: eventId,
+      eventName: `Poll ${pollId}`,
+      date: new Date().toISOString().split('T')[0], // Use current date
+      questionColumn: pollCol,
+      responseColumn: `POLL_R_${pollId}`,
+      notesColumn: `POLL_N_${pollId}`,
+    });
   });
 
   return events;
