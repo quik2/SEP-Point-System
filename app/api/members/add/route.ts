@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { writeFile } from 'fs/promises';
-import path from 'path';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,17 +39,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save the photo to public/photos
-    // Always save as .jpg for consistency with the photoMapping logic
-    const photoFileName = firstName.toLowerCase();
-    const photoPath = path.join(process.cwd(), 'public', 'photos', `${photoFileName}.jpg`);
-
-    // Convert File to Buffer and save
+    // Upload photo to Supabase Storage
+    const photoFileName = `${firstName.toLowerCase()}-${Date.now()}.jpg`;
     const bytes = await photo.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(photoPath, buffer);
 
-    // Add member to database with 100 starting points
+    const { error: uploadError } = await supabase.storage
+      .from('photos')
+      .upload(photoFileName, buffer, {
+        contentType: photo.type || 'image/jpeg',
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to upload photo' },
+        { status: 500 }
+      );
+    }
+
+    // Get the public URL for the uploaded photo
+    const { data: urlData } = supabase.storage
+      .from('photos')
+      .getPublicUrl(photoFileName);
+
+    const photoUrl = urlData.publicUrl;
+
+    // Add member to database with 100 starting points and photo URL
     const { data: newMember, error: insertError } = await supabase
       .from('members')
       .insert({
@@ -59,6 +74,7 @@ export async function POST(request: NextRequest) {
         points: 100,
         status: 'active',
         rank_change: 0,
+        photo_url: photoUrl,
       })
       .select()
       .single();

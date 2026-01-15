@@ -14,6 +14,7 @@ export interface Member {
   points: number;
   status: MemberStatus;
   rank_change: number;
+  photo_url?: string;
   created_at: string;
   updated_at: string;
 }

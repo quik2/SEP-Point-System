@@ -8,6 +8,9 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { getPhotoPath } from '@/lib/photoMapping';
 
+// Use photo_url from database if available, otherwise fall back to local photo mapping
+const getMemberPhoto = (member: Member) => member.photo_url || getPhotoPath(member.name);
+
 export default function LeaderboardPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +104,7 @@ export default function LeaderboardPage() {
                 <div className="relative mb-3">
                   <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-gray-400">
                     <Image
-                      src={getPhotoPath(top3[1].name)}
+                      src={getMemberPhoto(top3[1])}
                       alt={top3[1].name}
                       fill
                       className="object-cover"
@@ -145,7 +148,7 @@ export default function LeaderboardPage() {
                 <div className="relative mb-3">
                   <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden border-4 border-yellow-400 shadow-lg shadow-yellow-400/50">
                     <Image
-                      src={getPhotoPath(top3[0].name)}
+                      src={getMemberPhoto(top3[0])}
                       alt={top3[0].name}
                       fill
                       className="object-cover"
@@ -188,7 +191,7 @@ export default function LeaderboardPage() {
                 <div className="relative mb-3">
                   <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-orange-400">
                     <Image
-                      src={getPhotoPath(top3[2].name)}
+                      src={getMemberPhoto(top3[2])}
                       alt={top3[2].name}
                       fill
                       className="object-cover"
@@ -260,7 +263,7 @@ export default function LeaderboardPage() {
                   {/* Profile Photo */}
                   <div className="relative w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-border shrink-0">
                     <Image
-                      src={getPhotoPath(member.name)}
+                      src={getMemberPhoto(member)}
                       alt={member.name}
                       fill
                       className="object-cover"
