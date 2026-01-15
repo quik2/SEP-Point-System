@@ -143,7 +143,8 @@ export function getAttendanceForEvent(
 ): AttendanceResponse[] {
   return records
     .map(record => {
-      const person = record.fields['Person'] as string;
+      // Try both 'Person' and 'Name' columns for compatibility
+      const person = (record.fields['Person'] || record.fields['Name']) as string;
       if (!person) return null;
 
       const response = record.fields[event.responseColumn] as string | undefined;
@@ -163,7 +164,7 @@ export function getAttendanceForEvent(
  */
 export function getAllPersons(records: AirtableRecord[]): string[] {
   const persons = records
-    .map(r => r.fields['Person'] as string)
+    .map(r => (r.fields['Person'] || r.fields['Name']) as string)
     .filter(Boolean);
 
   return Array.from(new Set(persons));

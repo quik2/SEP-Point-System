@@ -99,20 +99,29 @@ export async function POST(request: NextRequest) {
     for (const member of members) {
       // Find if this member has a response in Airtable
       const airtableResponse = attendanceResponses.find(resp => {
-        // Try to match Airtable person to member name
+        // Try to match Airtable person to member name (case-insensitive)
+        const airtableName = resp.person.toLowerCase();
+        const memberName = member.name.toLowerCase();
         return (
-          resp.person.toLowerCase() === member.name.toLowerCase() ||
-          member.name.toLowerCase().includes(resp.person.toLowerCase())
+          airtableName === memberName ||
+          memberName.includes(airtableName) ||
+          airtableName.includes(memberName.split(' ')[0]) // Match first name
         );
       });
 
-      let status = 'absent'; // Default to absent - mark present when they show up
+      let status = 'absent'; // Default to absent
       let notes = null;
 
-      // If they responded "No", mark as excused_absent with their notes
-      if (airtableResponse && airtableResponse.response?.toLowerCase() === 'no') {
-        status = 'excused_absent';
-        notes = airtableResponse.notes || 'No reason provided';
+      if (airtableResponse) {
+        const response = airtableResponse.response?.toLowerCase();
+
+        if (response === 'yes') {
+          status = 'present';
+        } else if (response === 'no') {
+          status = 'excused_absent';
+          notes = airtableResponse.notes || null;
+        }
+        // 'maybe' or other responses stay as 'absent'
       }
 
       attendanceRecords.push({
