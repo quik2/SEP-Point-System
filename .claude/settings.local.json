@@ -23,7 +23,8 @@
       "Bash(git push)",
       "WebFetch(domain:airtable.com)",
       "Bash(curl:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

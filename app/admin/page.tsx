@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock, ChartBar, History, UserCog, LogOut, UserPlus } from 'lucide-react';
+import { Lock, ChartBar, History, UserCog, LogOut, UserPlus, Users } from 'lucide-react';
 import Image from 'next/image';
 import AttendanceGrid from '@/components/AttendanceGrid';
 import PointAdjuster from '@/components/PointAdjuster';
 import PointHistoryLog from '@/components/PointHistoryLog';
 import AddMember from '@/components/AddMember';
+import MemberList from '@/components/MemberList';
 import { cn } from '@/lib/utils';
 
 export default function AdminPage() {
@@ -14,7 +15,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'attendance' | 'adjust' | 'history' | 'add-member'>('attendance');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'adjust' | 'history' | 'add-member' | 'members'>('attendance');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
@@ -223,6 +224,22 @@ export default function AdminPage() {
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                 )}
               </button>
+
+              <button
+                onClick={() => setActiveTab('members')}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-3 font-medium transition-colors relative",
+                  activeTab === 'members'
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Users className="w-4 h-4" />
+                Members
+                {activeTab === 'members' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -233,6 +250,7 @@ export default function AdminPage() {
           {activeTab === 'adjust' && <PointAdjuster />}
           {activeTab === 'history' && <PointHistoryLog />}
           {activeTab === 'add-member' && <AddMember />}
+          {activeTab === 'members' && <MemberList />}
         </div>
 
         {/* Toast Notifications */}
