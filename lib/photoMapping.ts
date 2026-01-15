@@ -75,8 +75,14 @@ export function getPhotoPath(memberName: string): string {
     photoName = firstName;
   }
 
-  // Determine file extension (jpg for specific members, avif for others)
-  const extension = jpgMembers.includes(photoName) ? 'jpg' : 'avif';
+  // Determine file extension
+  // - Members in jpgMembers list use jpg
+  // - Members explicitly in nameMapping use avif (legacy photos)
+  // - New members (not in nameMapping) default to jpg
+  const isInNameMapping = nameMapping[lowerName] !== undefined || nameMapping[firstName] !== undefined;
+  const extension = jpgMembers.includes(photoName)
+    ? 'jpg'
+    : (isInNameMapping ? 'avif' : 'jpg');
 
   return `/photos/${photoName}.${extension}`;
 }

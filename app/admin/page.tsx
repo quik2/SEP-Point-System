@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock, ChartBar, History, UserCog, LogOut } from 'lucide-react';
+import { Lock, ChartBar, History, UserCog, LogOut, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import AttendanceGrid from '@/components/AttendanceGrid';
 import PointAdjuster from '@/components/PointAdjuster';
 import PointHistoryLog from '@/components/PointHistoryLog';
+import AddMember from '@/components/AddMember';
 import { cn } from '@/lib/utils';
 
 export default function AdminPage() {
@@ -13,7 +14,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'attendance' | 'adjust' | 'history'>('attendance');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'adjust' | 'history' | 'add-member'>('attendance');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
@@ -206,6 +207,22 @@ export default function AdminPage() {
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                 )}
               </button>
+
+              <button
+                onClick={() => setActiveTab('add-member')}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-3 font-medium transition-colors relative",
+                  activeTab === 'add-member'
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Member
+                {activeTab === 'add-member' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -215,6 +232,7 @@ export default function AdminPage() {
           {activeTab === 'attendance' && <AttendanceGrid />}
           {activeTab === 'adjust' && <PointAdjuster />}
           {activeTab === 'history' && <PointHistoryLog />}
+          {activeTab === 'add-member' && <AddMember />}
         </div>
 
         {/* Toast Notifications */}
